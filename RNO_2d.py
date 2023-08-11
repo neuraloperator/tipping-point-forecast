@@ -1,6 +1,5 @@
 """
-Author: Miguel Liu-Schiaffini (mliuschi@caltech.edu)
-    `FourierLayer2d` by Zongyi Li 
+`FourierLayer2d` from official FNO implementation
 
 This file implements a recurrent neural operator (RNO) based on the gated recurrent unit (GRU)
 and Fourier neural operator (FNO) architectures.
