@@ -10,3 +10,4 @@ Training models on pre-tipping data is performed by running files with names suc
 - [MixedLayerModel.jl](https://github.com/claresinger/MixedLayerModel.jl) is used to generate training data for the cloud cover experiments
 - PyTorch
 - [Neural Operator Library](https://github.com/neuraloperator/neuraloperator)
+- The airfoil dataset can be found [on Zenodo](https://zenodo.org/records/18098807)
