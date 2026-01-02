@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import sys
 import random
 
-from utilities import *
+from utilities_ks import *
 from torch.nn import GRU
 
 from timeit import default_timer
@@ -78,7 +78,6 @@ def round_down(num, divisor): # rounds `num` down to nearest multiple of `diviso
     return num - (num % divisor)
 
 
-
 if __name__ == '__main__':
     ntrain = 160
     ntest = 40
@@ -122,7 +121,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]

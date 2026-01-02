@@ -1,13 +1,10 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities3 import *
+from utilities_lorenz import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
-
-sys.path.append('../')
-from RNO_1d import *
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -43,7 +40,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of samples, grid size)
-    with open("nonstationary_lorenz_data_15_trajectories.p", "rb") as file:
+    with open("PATH/TO/DATA.p", "rb") as file:
         data_dict = pickle.load(file)
     
     tipping_point = 0 # time of tipping point -- data-dependent!
@@ -107,7 +104,8 @@ if __name__ == '__main__':
     print()
 
     # model
-    model = torch.load('model/rno1d_multi_step_fine_tuning_large_steps_large_train_set_up_to_12_ep25').cuda()
+    from neuralop.models import RNO
+    model = torch.load('PATH/TO/MODEL').cuda()
     print("Parameters:", model.count_params())
     print()
 
@@ -127,7 +125,9 @@ if __name__ == '__main__':
             for x, y in multi_step_test_loaders[n]:
                 x, y = x.cuda(), y.cuda()
 
-                out = model.predict(x, num_steps)[:,-1]
+                x_in = x.permute(0, 1, 3, 2)
+                out = model.predict(x_in, num_steps)[:,-1]
+                out = out.permute(0, 2, 1)
 
                 test_l2_list[n] += myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim))).item()
 

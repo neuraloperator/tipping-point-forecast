@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities import *
+from utilities_ks import *
 from tqdm import tqdm
 import pickle
 import sys

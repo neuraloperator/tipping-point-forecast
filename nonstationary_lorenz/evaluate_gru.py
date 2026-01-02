@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities3 import *
+from utilities_lorenz import *
 from tqdm import tqdm
 import pickle
 import sys
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of samples, grid size)
-    with open("nonstationary_lorenz_data_15_trajectories.p", "rb") as file:
+    with open("PATH/TO/DATA.p", "rb") as file:
         data_dict = pickle.load(file)
     
     tipping_point = 0 # time of tipping point -- data-dependent!

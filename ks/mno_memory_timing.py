@@ -1,13 +1,12 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities import *
+from utilities_ks import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
 
-sys.path.append('../')
-from fno_2d import *
+from neuralop.models import FNO
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -34,14 +33,22 @@ if __name__ == '__main__':
     n_iter = 100
     
     # Test different hyperparameters
-    model = Net2d(dim, dim, 20, 20, 28, pad_amount=(8,), pad_dim='1').to(device)
+    model = FNO(
+        n_modes=(20, 20),
+        hidden_channels=28,
+        in_channels=dim,
+        out_channels=dim,
+        n_layers=4,
+        positional_embedding="grid",
+        domain_padding=[0.5, 0]
+    ).to(device).float()
 
     ################################################################
     # data and preprocessing
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]
@@ -79,7 +86,9 @@ if __name__ == '__main__':
 
         start.record()
 
-        out = model(model_input)
+        # Permute for FNO
+        model_input_perm = model_input.permute(0, 3, 1, 2)
+        out = model(model_input_perm)
         for _ in range(num_steps - 1):
             out = model(out)
 

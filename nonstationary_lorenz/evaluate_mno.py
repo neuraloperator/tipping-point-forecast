@@ -1,10 +1,11 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities3 import *
+from utilities_lorenz import *
 from tqdm import tqdm
 import pickle
 
-from fourier_1d_ode import *
+from neuralop.models import FNO
+from neuralop.utils import count_model_params
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of samples, grid size)
-    with open("nonstationary_lorenz_data_15_trajectories.p", "rb") as file:
+    with open("PATH/TO/DATA.p", "rb") as file:
         data_dict = pickle.load(file)
     
     tipping_point = 0 # time of tipping point -- data-dependent!
@@ -91,7 +92,7 @@ if __name__ == '__main__':
 
     # model
     model = torch.load('PATH/TO/MODEL')
-    print("Parameters:", count_params(model))
+    print("Parameters:", count_model_params(model))
     print()
 
     ################################################################
@@ -111,10 +112,15 @@ if __name__ == '__main__':
                 x, y = x.cuda(), y.cuda()
                 x = x.reshape(-1, T, dim)
 
-                out = model(x)
+                # Permute for FNO
+                x_perm = x.permute(0, 2, 1)
+                out = model(x_perm)
+                out = out.permute(0, 2, 1)
 
                 for i in range(num_steps - 1):
-                    out = model(out)
+                    out_perm = out.permute(0, 2, 1)
+                    out = model(out_perm)
+                    out = out.permute(0, 2, 1)
 
                 test_l2_list[n] += myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim))).item()
 

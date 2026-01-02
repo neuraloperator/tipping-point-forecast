@@ -1,13 +1,13 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities import *
+from utilities_ks import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
 
-sys.path.append('../')
-from RNO_2d import *
+from neuralop.models import FNO
+from neuralop.utils import count_model_params
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     model = torch.load(model_path).cuda()
     print("Model:", model_path)
-    print("Parameters:", model.count_params())
+    print("Parameters:", count_model_params(model))
     print()
 
     ################################################################
@@ -124,10 +124,16 @@ if __name__ == '__main__':
                 x = x.to(device).view(batch_size, T, n_x, dim)
                 y = y.to(device).view(batch_size, T, n_x, dim)
 
-                out = model(x).reshape(batch_size, T, n_x, dim)
-
+                x_perm = x.permute(0, 3, 1, 2)
+                out = model(x_perm)
+                out_reshaped = out.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
+                
                 for i in range(num_steps - 1):
-                    out = model(out).reshape(batch_size, T, n_x, dim)
+                    out_perm = out_reshaped.permute(0, 3, 1, 2)
+                    out = model(out_perm)
+                    out_reshaped = out.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
+
+                out = out_reshaped
 
                 test_l2_list[n] += lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim))).item()
 

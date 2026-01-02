@@ -8,7 +8,7 @@ from julia.api import Julia
 from sklearn.preprocessing import MinMaxScaler
 import string
 
-from mno_clouds import *
+from neuralop.models import FNO
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,10 +21,6 @@ if __name__ == '__main__':
 
     model_in_dim = 5
     out_dim = 5
-
-    # Benchmark different hyperparameters
-    #model = FNO1d(model_in_dim, out_dim, 64, 128).to(device).float()
-
     n_iter = 100
 
     ############################################################

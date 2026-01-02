@@ -10,8 +10,8 @@ import torch.nn.functional as F
 import random
 from tqdm import tqdm
 
-from utilities import *
-from fno_2d import *
+from utilities_ks import *
+from neuralop.models import FNO
 
 from timeit import default_timer
 import scipy.io
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data, dtype=torch.float)
 
     n_time = data.shape[2]
@@ -142,7 +142,15 @@ if __name__ == '__main__':
     # model and optimizer
     ################################################################
 
-    model = Net2d(dim, dim, modes1, modes2, width, pad_amount=(8,), pad_dim='1').cuda()
+    model = FNO(
+        n_modes=(modes1, modes2),
+        hidden_channels=width,
+        in_channels=dim,
+        out_channels=dim,
+        n_layers=4,
+        positional_embedding="grid",
+        domain_padding=[0.5, 0]
+    ).cuda().float()
     print("Model parameters:", model.count_params())
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
@@ -171,7 +179,11 @@ if __name__ == '__main__':
             x = x.to(device).view(batch_size, T, n_x, dim)
             y = y.to(device).view(batch_size, T, n_x, dim)
 
-            out = model(x).reshape(batch_size, T, n_x, dim)
+            # Permute for FNO
+            x_perm = x.permute(0, 3, 1, 2)
+            out_perm = model(x_perm)
+            # Permute back
+            out = out_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
             loss = lploss(out, y)
             train_l2 += loss.item()
 
@@ -187,13 +199,15 @@ if __name__ == '__main__':
                 x = x.to(device).view(batch_size, T, n_x, dim)
                 y = y.to(device).view(batch_size, T, n_x, dim)
 
-                out = model(x).reshape(batch_size, T, n_x, dim)
+                # Permute for FNO
+                x_perm = x.permute(0, 3, 1, 2)
+                out_perm = model(x_perm)
+                out = out_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
                 test_l2 += lploss(out, y).item()
 
         train_l2 /= num_train_samples
         test_l2 /= num_test_samples
 
-        
         print("Epoch:", ep, "Time:", default_timer() - t1, "Train L2:", train_l2, "Test L2:", test_l2)
 
     ### Multi-step fine-tuning
@@ -221,10 +235,15 @@ if __name__ == '__main__':
                 y = y.to(device).view(batch_size, T, n_x, dim)
 
                 optimizer.zero_grad()
-                out = model(x).reshape(batch_size, T, n_x, dim)
+                # Permute for FNO
+                x_perm = x.permute(0, 3, 1, 2)
+                out_perm = model(x_perm)
+                out = out_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
 
                 for i in range(num_steps - 1):
-                    out = model(out).reshape(batch_size, T, n_x, dim)
+                    out_perm = out.permute(0, 3, 1, 2)
+                    out_next_perm = model(out_perm)
+                    out = out_next_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
 
                 mse = F.mse_loss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim)), reduction='mean')
                 l2 = lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim)))
@@ -245,10 +264,15 @@ if __name__ == '__main__':
                         x = x.to(device).view(batch_size, T, n_x, dim)
                         y = y.to(device).view(batch_size, T, n_x, dim)
 
-                        out = model(x).reshape(batch_size, T, n_x, dim)
+                        # Permute for FNO
+                        x_perm = x.permute(0, 3, 1, 2)
+                        out_perm = model(x_perm)
+                        out = out_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
 
                         for i in range(num_steps - 1):
-                            out = model(out).reshape(batch_size, T, n_x, dim)
+                            out_perm = out.permute(0, 3, 1, 2)
+                            out_next_perm = model(out_perm)
+                            out = out_next_perm.permute(0, 2, 3, 1).reshape(batch_size, T, n_x, dim)
 
                         test_l2_list[n] += lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim))).item()
 

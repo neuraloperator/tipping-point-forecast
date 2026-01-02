@@ -7,10 +7,9 @@ import random
 from sklearn.preprocessing import MinMaxScaler
 
 sys.path.append("../nonstationary_lorenz")
-from utilities3 import *
+from utilities_lorenz import *
 
-sys.path.append('../')
-from RNO_1d import *
+from rno_wrapper import RNOWrapper
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -25,166 +24,6 @@ def get_index_from_time(T_min, T_max, query_time, arr_size):
 
 def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
     return num - (num % divisor)
-
-class RNO_1D_5layers(nn.Module):
-    def __init__(self, in_dim, out_dim, modes, width, padding=None):
-        super(RNO_1D_5layers, self).__init__()
-
-        self.modes = modes
-        self.width = width
-        self.padding = padding
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-
-        self.p = nn.Linear(in_dim + 1, self.width) # input channel_dim is in_dim + 1: u is in-dim, and time label t is 1 dim
-
-        self.layer1 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer2 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer3 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer4 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer5 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=False)
-
-        self.q = nn.Linear(self.width, out_dim)
-    
-    def forward(self, x, init_hidden_states=[None, None, None, None, None]): # h must be padded if using padding
-        batch_size, timesteps, domain_size, dim = x.shape
-
-        h1, h2, h3, h4, h5 = init_hidden_states
-
-        grid = self.get_grid(x.shape, x.device)
-        x = torch.cat((x, grid), dim=-1)
-        x = self.p(x)
-
-        x = x.permute(0, 1, 3, 2)
-        if self.padding:
-            x = F.pad(x, [0,self.padding]) # pad the domain if input is non-periodic
-
-        hidden_seq1 = self.layer1(x, h1)
-        hidden_seq2 = self.layer2(hidden_seq1, h2)
-        hidden_seq3 = self.layer3(hidden_seq2, h3)
-        hidden_seq4 = self.layer4(hidden_seq3, h4)
-        h = self.layer5(hidden_seq4, h5) # output shape is (batch, width, domain_size)
-
-        # Save final hidden states
-        final_hidden_states = [hidden_seq1[:,-1], hidden_seq2[:,-1], hidden_seq3[:,-1], hidden_seq4[:,-1], h]
-
-        h_unpad = h[..., :-self.padding] # pad the domain if input is non-periodic
-
-        h_unpad = h_unpad.permute(0, 2, 1)
-        
-        pred = self.q(h_unpad)
-
-        return pred, final_hidden_states
-
-    def predict(self, x, num_steps, forcing=None): # num_steps is the number of steps ahead to predict
-        # forcing is an array of length `num_steps - 1` that is appended to the end of the 
-            # input dimensions of `pred` at subsequent steps ahead
-            # `forcing` should have shape (batch, num_steps - 1, domain_size, forcing_dim)
-        output = []
-        states = [None, None, None, None, None]
-        
-        for i in range(num_steps):
-            pred, states = self.forward(x, states)
-            output.append(pred)
-            x = pred.reshape((pred.shape[0], 1, pred.shape[1], pred.shape[2]))
-            if forcing is not None and i < num_steps - 1:
-                forcing_term = torch.unsqueeze(forcing[:, i], 1)
-                x = torch.cat((x, forcing_term), dim=-1)
-
-        return torch.stack(output, dim=1)
-        
-    def get_grid(self, shape, device):
-        batchsize, steps, size_x = shape[0], shape[1], shape[2]
-        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        gridx = gridx.reshape(1, 1, size_x, 1).repeat([batchsize, steps, 1, 1])
-        return gridx.to(device)
-
-    def count_params(self):
-        # Credit: Vadim Smolyakov on PyTorch forum
-        model_parameters = filter(lambda p: p.requires_grad, self.parameters())
-        return int(sum([np.prod(p.size()) for p in model_parameters]))
-
-class RNO_1D_7layers(nn.Module):
-    def __init__(self, in_dim, out_dim, modes, width, padding=None):
-        super(RNO_1D_7layers, self).__init__()
-
-        self.modes = modes
-        self.width = width
-        self.padding = padding
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-
-        self.p = nn.Linear(in_dim + 1, self.width) # input channel_dim is in_dim + 1: u is in-dim, and time label t is 1 dim
-
-        self.layer1 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer2 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer3 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer4 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer5 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer6 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=True)
-        self.layer7 = RNO_layer(in_dim, out_dim, modes, width, return_sequences=False)
-
-        self.q = nn.Linear(self.width, out_dim)
-    
-    def forward(self, x, init_hidden_states=[None, None, None, None, None, None, None]): # h must be padded if using padding
-        batch_size, timesteps, domain_size, dim = x.shape
-
-        h1, h2, h3, h4, h5, h6, h7 = init_hidden_states
-
-        grid = self.get_grid(x.shape, x.device)
-        x = torch.cat((x, grid), dim=-1)
-        x = self.p(x)
-
-        x = x.permute(0, 1, 3, 2)
-        if self.padding:
-            x = F.pad(x, [0,self.padding]) # pad the domain if input is non-periodic
-
-        hidden_seq1 = self.layer1(x, h1)
-        hidden_seq2 = self.layer2(hidden_seq1, h2)
-        hidden_seq3 = self.layer3(hidden_seq2, h3)
-        hidden_seq4 = self.layer4(hidden_seq3, h4)
-        hidden_seq5 = self.layer3(hidden_seq4, h5)
-        hidden_seq6 = self.layer4(hidden_seq5, h6)
-        h = self.layer7(hidden_seq6, h7) # output shape is (batch, width, domain_size)
-
-        # Save final hidden states
-        final_hidden_states = [hidden_seq1[:,-1], hidden_seq2[:,-1], hidden_seq3[:,-1], hidden_seq4[:,-1], hidden_seq5[:,-1], hidden_seq6[:,-1], h]
-
-        h_unpad = h[..., :-self.padding] # pad the domain if input is non-periodic
-
-        h_unpad = h_unpad.permute(0, 2, 1)
-        
-        pred = self.q(h_unpad)
-
-        return pred, final_hidden_states
-
-    def predict(self, x, num_steps, forcing=None): # num_steps is the number of steps ahead to predict
-        # forcing is an array of length `num_steps - 1` that is appended to the end of the 
-            # input dimensions of `pred` at subsequent steps ahead
-            # `forcing` should have shape (batch, num_steps - 1, domain_size, forcing_dim)
-        output = []
-        states = [None, None, None, None, None, None, None]
-        
-        for i in range(num_steps):
-            pred, states = self.forward(x, states)
-            output.append(pred)
-            x = pred.reshape((pred.shape[0], 1, pred.shape[1], pred.shape[2]))
-            if forcing is not None and i < num_steps - 1:
-                forcing_term = torch.unsqueeze(forcing[:, i], 1)
-                x = torch.cat((x, forcing_term), dim=-1)
-
-        return torch.stack(output, dim=1)
-        
-    def get_grid(self, shape, device):
-        batchsize, steps, size_x = shape[0], shape[1], shape[2]
-        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        gridx = gridx.reshape(1, 1, size_x, 1).repeat([batchsize, steps, 1, 1])
-        return gridx.to(device)
-
-    def count_params(self):
-        # Credit: Vadim Smolyakov on PyTorch forum
-        model_parameters = filter(lambda p: p.requires_grad, self.parameters())
-        return int(sum([np.prod(p.size()) for p in model_parameters]))
 
 if __name__ == '__main__':
     ################################################################
@@ -224,7 +63,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of trajectories, number of samples, grid size)
-    data = np.load("clouds_noisy_brownian_100_traj_small_dt.npy")
+    data = np.load("PATH/TO/DATA.npy")
     
     tipping_point = 10.0 # time of tipping point -- data-dependent!
 
@@ -344,7 +183,7 @@ if __name__ == '__main__':
     print()
 
     # model
-    model = RNO_1D_5layers(in_dim, out_dim, modes, width, padding=T // 8).cuda().float()
+    model = RNOWrapper(in_dim, out_dim, modes, width, n_layers=5, padding=T // 8).cuda().float()
     print("Parameters:", model.count_params())
     print()
 

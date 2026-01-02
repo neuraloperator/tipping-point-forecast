@@ -5,7 +5,7 @@ from timeit import default_timer
 from sklearn.preprocessing import MinMaxScaler
 
 sys.path.append("../nonstationary_lorenz")
-from utilities3 import *
+from utilities_lorenz import *
 
 from tqdm import tqdm
 import random

@@ -11,9 +11,7 @@ import sys
 import random
 import pickle
 
-from utilities import *
-sys.path.append('../')
-from RNO_2d import *
+from utilities_ks import *
 
 from timeit import default_timer
 import scipy.io
@@ -24,8 +22,6 @@ np.random.seed(0)
 
 def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
     return num - (num % divisor)
-
-
 
 if __name__ == '__main__':
     ntrain = 160
@@ -74,7 +70,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]
@@ -172,7 +168,18 @@ if __name__ == '__main__':
     # model and optimizer
     ################################################################
 
-    model = RNO_2D(dim, dim, modes1, modes2, width, pad_amount=(8,), pad_dim='1').cuda()
+    from neuralop.models import RNO
+    
+    model = RNO(
+        n_modes=(modes1, modes2),
+        hidden_channels=width,
+        in_channels=dim, 
+        out_channels=dim,
+        n_layers=3,
+        positional_embedding="grid",
+        domain_padding=[0.1, 0]
+    ).cuda()
+    
     print("Model parameters:", model.count_params())
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
@@ -202,7 +209,11 @@ if __name__ == '__main__':
             x = x.to(device).view(batch_size, n_intervals, T, n_x, dim)
             y = y.to(device).view(batch_size, T, n_x, dim)
 
-            out = model.predict(x, num_steps=1)[:,-1]
+            # Permute for RNO
+            x_in = x.permute(0, 1, 4, 2, 3)
+            out = model.predict(x_in, num_steps=1)[:,-1]
+            # Permute back
+            out = out.permute(0, 2, 3, 1)
             loss = lploss(out, y)
             train_l2 += loss.item()
 
@@ -218,7 +229,9 @@ if __name__ == '__main__':
                 x = x.to(device).view(batch_size, n_intervals, T, n_x, dim)
                 y = y.to(device).view(batch_size, T, n_x, dim)
 
-                out = model.predict(x, num_steps=1)[:,-1]
+                x_in = x.permute(0, 1, 4, 2, 3)
+                out = model.predict(x_in, num_steps=1)[:,-1]
+                out = out.permute(0, 2, 3, 1)
                 test_l2 += lploss(out, y).item()
 
         train_l2 /= num_train_samples
@@ -251,7 +264,9 @@ if __name__ == '__main__':
                 x, y = x.cuda(), y.cuda()
 
                 optimizer.zero_grad()
-                out = model.predict(x, num_steps)[:,-1]
+                x_in = x.permute(0, 1, 4, 2, 3)
+                out = model.predict(x_in, num_steps=num_steps)[:,-1]
+                out = out.permute(0, 2, 3, 1)
 
                 l2 = lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim)))
                 optimizer.zero_grad()
@@ -270,7 +285,9 @@ if __name__ == '__main__':
                         x = x.to(device).view(batch_size, n_intervals, T, n_x, dim)
                         y = y.to(device).view(batch_size, T, n_x, dim)
 
-                        out = model.predict(x, num_steps)[:,-1]
+                        x_in = x.permute(0, 1, 4, 2, 3)
+                        out = model.predict(x_in, num_steps=num_steps)[:,-1]
+                        out = out.permute(0, 2, 3, 1)
 
                         test_l2_list[n] += lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim))).item()
 

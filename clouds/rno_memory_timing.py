@@ -8,10 +8,7 @@ from julia.api import Julia
 from sklearn.preprocessing import MinMaxScaler
 import string
 
-sys.path.append('../')
-from RNO_1d import *
-from rno_clouds_1d_ode_no_forcing import *
-
+from rno_wrapper import RNOWrapper
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

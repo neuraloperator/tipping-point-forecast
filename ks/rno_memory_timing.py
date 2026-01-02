@@ -1,13 +1,10 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities import *
+from utilities_ks import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
-
-sys.path.append('../')
-from RNO_2d import *
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -39,7 +36,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]
@@ -76,7 +73,9 @@ if __name__ == '__main__':
         end = torch.cuda.Event(enable_timing=True)
 
         start.record()
-        out = model.predict(model_input, num_steps=num_steps)
+        # Permute for neuraloperator
+        x_in = model_input.permute(0, 1, 4, 2, 3)
+        out = model.predict(x_in, num_steps=num_steps)
         end.record()
 
         # Waits for everything to finish running

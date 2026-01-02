@@ -1,15 +1,12 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities3 import *
+from utilities_lorenz import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
 
-from fourier_1d_ode import *
-
-sys.path.append('../')
-from RNO_1d import *
+from neuralop.models import RNO
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -38,7 +35,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of samples, grid size)
-    with open("nonstationary_lorenz_data_15_trajectories.p", "rb") as file:
+    with open("PATH/TO/DATA.p", "rb") as file:
         data_dict = pickle.load(file)
 
     dt = data_dict['dt']
@@ -79,7 +76,9 @@ if __name__ == '__main__':
         end = torch.cuda.Event(enable_timing=True)
 
         start.record()
-        out = model.predict(model_input, num_steps=num_steps)
+        # Permute for NeuralOp
+        x_in = model_input.permute(0, 1, 3, 2)
+        out = model.predict(x_in, num_steps=num_steps)
         end.record()
 
         # Waits for everything to finish running

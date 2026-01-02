@@ -5,13 +5,14 @@ from timeit import default_timer
 from sklearn.preprocessing import MinMaxScaler
 
 sys.path.append("../nonstationary_lorenz")
-from utilities3 import *
+from utilities_lorenz import *
 
 from tqdm import tqdm
 import random
 
-sys.path.append('../')
+
 from RNO_1d import *
+from rno_wrapper import RNOWrapper
 
 torch.manual_seed(0)
 np.random.seed(0)

@@ -1,13 +1,10 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities import *
+from utilities_ks import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
-
-sys.path.append('../')
-from RNO_2d import *
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -101,10 +98,12 @@ if __name__ == '__main__':
     ################################################################
     # model
     ################################################################
+    from neuralop.models import RNO
+    from neuralop.utils import count_model_params
 
     model = torch.load(model_path).cuda()
     print("Model:", model_path)
-    print("Parameters:", model.count_params())
+    print("Parameters:", count_model_params(model))
     print()
 
     ################################################################
@@ -124,7 +123,9 @@ if __name__ == '__main__':
                 x = x.to(device).view(batch_size, n_intervals, T, n_x, dim)
                 y = y.to(device).view(batch_size, T, n_x, dim)
 
-                out = model.predict(x, num_steps)[:,-1]
+                x_in = x.permute(0, 1, 4, 2, 3)
+                out = model.predict(x_in, num_steps=num_steps)[:, -1]
+                out = out.permute(0, 2, 3, 1)
 
                 test_l2_list[n] += lploss(torch.reshape(out, (-1, n_x * T * dim)), torch.reshape(y, (-1, n_x * T * dim))).item()
 

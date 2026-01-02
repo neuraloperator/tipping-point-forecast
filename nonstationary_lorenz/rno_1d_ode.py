@@ -1,13 +1,10 @@
 import torch.nn.functional as F
 from timeit import default_timer
-from utilities3 import *
+from utilities_lorenz import *
 from tqdm import tqdm
 import pickle
 import sys
 import random
-
-sys.path.append('../')
-from RNO_1d import *
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -59,7 +56,7 @@ if __name__ == '__main__':
     ################################################################
 
     # Data is of the shape (number of samples, grid size)
-    with open("nonstationary_lorenz_data_15_trajectories.p", "rb") as file:
+    with open("PATH/TO/DATA.p", "rb") as file:
         data_dict = pickle.load(file)
     
     tipping_point = 0 # time of tipping point -- data-dependent!
@@ -168,7 +165,17 @@ if __name__ == '__main__':
     print()
 
     # model
-    model = RNO_1D(dim, dim, modes, width, padding=8).cuda().float()
+    from neuralop.models import RNO
+    
+    model = RNO(
+        n_modes=(modes,),
+        hidden_channels=width,
+        in_channels=dim,
+        out_channels=dim,
+        n_layers=3,
+        positional_embedding="grid",
+        domain_padding=0.125
+    ).cuda().float()
     
     print("Parameters:", model.count_params())
     print()
@@ -199,7 +206,10 @@ if __name__ == '__main__':
             x, y = x.cuda(), y.cuda()
 
             optimizer.zero_grad()
-            out = model.predict(x, num_steps=1)[:,-1]
+            
+            x_in = x.permute(0, 1, 3, 2)
+            out = model.predict(x_in, num_steps=1)
+            out = out[:, -1].permute(0, 2, 1)
 
             mse = F.mse_loss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim)), reduction='mean')
             l2 = myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim)))
@@ -216,7 +226,9 @@ if __name__ == '__main__':
             for x, y in test_loader:
                 x, y = x.cuda(), y.cuda()
 
-                out = model.predict(x, num_steps=1)[:,-1]
+                x_in = x.permute(0, 1, 3, 2)
+                out = model.predict(x_in, num_steps=1)[:,-1]
+                out = out.permute(0, 2, 1)
                 test_l2 += myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim))).item()
 
         train_mse /= len(train_loader)
@@ -250,7 +262,9 @@ if __name__ == '__main__':
                 x, y = x.cuda(), y.cuda()
 
                 optimizer.zero_grad()
-                out = model.predict(x, num_steps)[:,-1]
+                x_in = x.permute(0, 1, 3, 2)
+                out = model.predict(x_in, num_steps=num_steps)[:,-1]
+                out = out.permute(0, 2, 1)
 
                 mse = F.mse_loss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim)), reduction='mean')
                 l2 = myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim)))
@@ -269,7 +283,9 @@ if __name__ == '__main__':
                     for x, y in multi_step_test_loaders[n]:
                         x, y = x.cuda(), y.cuda()
 
-                        out = model.predict(x, num_steps)[:,-1]
+                        x_in = x.permute(0, 1, 3, 2)
+                        out = model.predict(x_in, num_steps=num_steps)[:,-1]
+                        out = out.permute(0, 2, 1)
 
                         test_l2_list[n] += myloss(torch.reshape(out, (-1, T * dim)), torch.reshape(y, (-1, T * dim))).item()
 

@@ -7,6 +7,8 @@ Training models on pre-tipping data is performed by running files with names suc
 
 ## Requirements:
 - Julia is required to run cloud cover experiments
+- Training data for non-stationary Lorenz-63 can be generated with `nonstationary_lorenz/run_ode_solver.py`.
+- Training data for non-stationary KS can be generated with `ks/generate_nonstationary_ks.py`.
 - [MixedLayerModel.jl](https://github.com/claresinger/MixedLayerModel.jl) is used to generate training data for the cloud cover experiments
 - PyTorch
 - [Neural Operator Library](https://github.com/neuraloperator/neuraloperator)
