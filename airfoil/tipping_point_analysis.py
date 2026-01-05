@@ -105,7 +105,6 @@ def run_inference(model, x, num_steps, model_type, device):
         return out
 
     elif model_type == 'RNO':
-        # RNO takes (B, T, C, H, W)
         # Predict returns full sequence, we take the last one
         return model.predict(x, num_steps)[:, -1]
 
@@ -127,9 +126,8 @@ if __name__ == '__main__':
     # 1. Load Data
     print(f"Loading data for {SETTING}...")
     
-    # We use a dummy 1-step to get the full datasets, then we'll iterate manually
     _, val_loaders, test_loaders, _, _, _, _, normalizer = load_airfoil_multi_step_efficient(
-        steps=[comp_steps], # Only load the horizon we care about
+        steps=[comp_steps],
         history=history,
         batch_size=batch_size,
         ntrain=ntrain,

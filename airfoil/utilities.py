@@ -91,7 +91,6 @@ def load_airfoil_multi_step(num_steps,
 
     for i in range(1, n_traj + 1):
         traj_name = 'traj' + str(i) + traj_postfix
-        # Note: Preprocessing script removed, so we only look for the corrected file if requested.
         traj_filename = 'divergence_corrected_traj.npy' if use_divergence_corrected else 'traj.npy'
         
         # Load trajectory
