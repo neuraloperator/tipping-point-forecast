@@ -3,7 +3,7 @@ import random
 import os
 from functools import lru_cache
 import torch
-from neuralop.utils import UnitGaussianNormalizer
+import math
 
 # ---------------- Constants ----------------
 
@@ -25,6 +25,140 @@ stall_times_5k = {
 }
 
 # ---------------- Helpers ----------------
+
+class LpLoss(object):
+    def __init__(self, d=1, p=2, L=2*math.pi, reduce_dims=0, reductions='sum'):
+        super().__init__()
+
+        self.d = d
+        self.p = p
+
+        if isinstance(reduce_dims, int):
+            self.reduce_dims = [reduce_dims]
+        else:
+            self.reduce_dims = reduce_dims
+        
+        if self.reduce_dims is not None:
+            if isinstance(reductions, str):
+                assert reductions == 'sum' or reductions == 'mean'
+                self.reductions = [reductions]*len(self.reduce_dims)
+            else:
+                for j in range(len(reductions)):
+                    assert reductions[j] == 'sum' or reductions[j] == 'mean'
+                self.reductions = reductions
+
+        if isinstance(L, float):
+            self.L = [L]*self.d
+        else:
+            self.L = L
+    
+    def uniform_h(self, x):
+        h = [0.0]*self.d
+        for j in range(self.d, 0, -1):
+            h[-j] = self.L[-j]/x.size(-j)
+        
+        return h
+
+    def reduce_all(self, x):
+        for j in range(len(self.reduce_dims)):
+            if self.reductions[j] == 'sum':
+                x = torch.sum(x, dim=self.reduce_dims[j], keepdim=True)
+            else:
+                x = torch.mean(x, dim=self.reduce_dims[j], keepdim=True)
+        
+        return x
+
+    def abs(self, x, y, h=None):
+        #Assume uniform mesh
+        if h is None:
+            h = self.uniform_h(x)
+        else:
+            if isinstance(h, float):
+                h = [h]*self.d
+        
+        const = math.prod(h)**(1.0/self.p)
+        diff = const*torch.norm(torch.flatten(x, start_dim=-self.d) - torch.flatten(y, start_dim=-self.d), \
+                                              p=self.p, dim=-1, keepdim=False)
+
+        if self.reduce_dims is not None:
+            diff = self.reduce_all(diff).squeeze()
+            
+        return diff
+
+    def rel(self, x, y):
+
+        diff = torch.norm(torch.flatten(x, start_dim=-self.d) - torch.flatten(y, start_dim=-self.d), \
+                          p=self.p, dim=-1, keepdim=False)
+        ynorm = torch.norm(torch.flatten(y, start_dim=-self.d), p=self.p, dim=-1, keepdim=False)
+
+        diff = diff/ynorm
+
+        if self.reduce_dims is not None:
+            diff = self.reduce_all(diff).squeeze()
+            
+        return diff
+
+    def __call__(self, x, y):
+        return self.rel(x, y)
+
+class UnitGaussianNormalizer:
+    def __init__(self, x, eps=0.00001, reduce_dim=[0], verbose=True):
+        super().__init__()
+        n_samples, *shape = x.shape
+        self.sample_shape = shape
+        self.verbose = verbose
+        self.reduce_dim = reduce_dim
+
+        # x could be in shape of ntrain*n or ntrain*T*n or ntrain*n*T
+        self.mean = torch.mean(x, reduce_dim, keepdim=True).squeeze(0)
+        self.std = torch.std(x, reduce_dim, keepdim=True).squeeze(0)
+        self.eps = eps
+        
+        if verbose:
+            print(f'UnitGaussianNormalizer init on {n_samples}, reducing over {reduce_dim}, samples of shape {shape}.')
+            print(f'   Mean and std of shape {self.mean.shape}, eps={eps}')
+
+    def encode(self, x):
+        # x = x.view(-1, *self.sample_shape)
+        x -= self.mean
+        x /= (self.std + self.eps)
+        # x = (x.view(-1, *self.sample_shape) - self.mean) / (self.std + self.eps)
+        return x
+
+    def decode(self, x, sample_idx=None):
+        if sample_idx is None:
+            std = self.std + self.eps # n
+            mean = self.mean
+        else:
+            if len(self.mean.shape) == len(sample_idx[0].shape):
+                std = self.std[sample_idx] + self.eps  # batch*n
+                mean = self.mean[sample_idx]
+            if len(self.mean.shape) > len(sample_idx[0].shape):
+                std = self.std[:,sample_idx]+ self.eps # T*batch*n
+                mean = self.mean[:,sample_idx]
+
+        # x is in shape of batch*n or T*batch*n
+        # x = (x.view(self.sample_shape) * std) + mean
+        # x = x.view(-1, *self.sample_shape)
+        x *= std
+        x += mean
+
+        return x
+
+    def cuda(self):
+        self.mean = self.mean.cuda()
+        self.std = self.std.cuda()
+        return self
+
+    def cpu(self):
+        self.mean = self.mean.cpu()
+        self.std = self.std.cpu()
+        return self
+    
+    def to(self, device):
+        self.mean = self.mean.to(device)
+        self.std = self.std.to(device)
+        return self
 
 @lru_cache(maxsize=256)
 def get_grid_2d(shape, device):

@@ -7,7 +7,7 @@ import os
 
 from utilities import load_airfoil_multi_step, get_grid_2d
 from neuralop.utils import count_model_params
-from neuralop import LpLoss
+from utilities import LpLoss
 from models import GRU_spatial_net
 
 if __name__ == '__main__':

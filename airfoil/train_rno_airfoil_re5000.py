@@ -8,7 +8,7 @@ import os
 from utilities import load_airfoil_multi_step
 from neuralop.utils import count_model_params
 from neuralop.models import RNO
-from neuralop import LpLoss
+from utilities import LpLoss
 
 if __name__ == '__main__':
     ntrain = 7
