@@ -4,8 +4,11 @@ from timeit import default_timer
 
 from sklearn.preprocessing import MinMaxScaler
 
-sys.path.append("../nonstationary_lorenz")
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "../nonstationary_lorenz"))
 from utilities_lorenz import *
+import numpy as np
 
 from tqdm import tqdm
 import random
@@ -128,7 +131,8 @@ if __name__ == '__main__':
 
     # model
     experiment_name = 'PATH/TO/MODEL'
-    model = torch.load(experiment_name).cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(experiment_name, map_location=device)
     print("Parameters:", count_params(model))
     print("Experiment name:", experiment_name)
     print()
@@ -149,11 +153,17 @@ if __name__ == '__main__':
             for x, y in multi_step_test_loaders[n]:
                 x, y = x.cuda(), y.cuda()
                 x = x.reshape(-1, T, in_dim)
+                
+                # Permute for FNO
+                x = x.permute(0, 2, 1)
 
                 out = model(x)
 
                 for i in range(num_steps - 1):
                     out = model(out)
+                
+                # Permute back
+                out = out.permute(0, 2, 1)
 
                 test_l2_list[n] += myloss(torch.reshape(out, (-1, T * out_dim)), torch.reshape(y, (-1, T * out_dim))).item()
 

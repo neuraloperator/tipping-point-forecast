@@ -10,8 +10,10 @@ from timeit import default_timer
 
 from sklearn.preprocessing import MinMaxScaler
 
+import os
+import numpy as np
 import sys
-sys.path.append("../nonstationary_lorenz")
+sys.path.append(os.path.join(os.path.dirname(__file__), "../nonstationary_lorenz"))
 from utilities_lorenz import *
 
 from tqdm import tqdm
@@ -226,6 +228,7 @@ if __name__ == '__main__':
         train_l2 = 0
         for x, y in tqdm(train_loader):
             x, y = x.cuda(), y.cuda()
+            x = x.reshape(-1, T, in_dim)
 
             optimizer.zero_grad()
             # Permute for FNO
@@ -248,6 +251,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             for x, y in test_loader:
                 x, y = x.cuda(), y.cuda()
+                x = x.reshape(-1, T, in_dim)
 
                 # Permute for FNO
                 x_perm = x.permute(0, 2, 1)

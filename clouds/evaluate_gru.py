@@ -4,8 +4,11 @@ from timeit import default_timer
 
 from sklearn.preprocessing import MinMaxScaler
 
-sys.path.append("../nonstationary_lorenz")
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "../nonstationary_lorenz"))
 from utilities_lorenz import *
+import numpy as np
 
 from tqdm import tqdm
 import random
@@ -129,7 +132,8 @@ if __name__ == '__main__':
     # model
     experiment_name = 'PATH/TO/MODEL'
     
-    model = torch.load(experiment_name).cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(experiment_name, map_location=device)
     print("Parameters:", model.count_params())
     print("Experiment name:", experiment_name)
     print()

@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import sys
 import pickle
-from julia.api import Julia
 from sklearn.preprocessing import MinMaxScaler
 import string
 
 from rno_wrapper import RNOWrapper
+
+def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
+    return num - (num % divisor)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -21,7 +23,7 @@ if __name__ == '__main__':
     experiment_name = 'PATH/TO/MODEL'
     model = torch.load(experiment_name, map_location=device)
 
-    model_in_dim = 5
+    in_dim = 5
     out_dim = 5
 
     n_iter = 100
@@ -88,7 +90,7 @@ if __name__ == '__main__':
     print()
     times = []
     for i in range(n_iter + 1):
-        model_input = torch.randn(1, n_intervals, T, model_in_dim).to(device)
+        model_input = torch.randn(1, n_intervals, T, in_dim).to(device)
 
         # Time: https://discuss.pytorch.org/t/how-to-measure-time-in-pytorch/26964
         start = torch.cuda.Event(enable_timing=True)

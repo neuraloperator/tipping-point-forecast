@@ -13,7 +13,6 @@ class RNOWrapper(nn.Module):
             in_channels=in_dim,
             out_channels=out_dim,
             n_layers=n_layers,
-            positional_embedding="grid",
             domain_padding=padding
         )
 
@@ -24,8 +23,7 @@ class RNOWrapper(nn.Module):
         # Forward pass through RNO
         pred_permuted, final_hidden_states = self.rno(
             x_permuted, 
-            init_hidden_states=init_hidden_states, 
-            return_hidden_states=True
+            init_hidden_states=init_hidden_states
         )
         
         # Permute output back

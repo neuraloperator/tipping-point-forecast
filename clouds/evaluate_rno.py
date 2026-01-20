@@ -4,14 +4,16 @@ from timeit import default_timer
 
 from sklearn.preprocessing import MinMaxScaler
 
-sys.path.append("../nonstationary_lorenz")
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "../nonstationary_lorenz"))
 from utilities_lorenz import *
+import numpy as np
 
 from tqdm import tqdm
 import random
 
 
-from RNO_1d import *
 from rno_wrapper import RNOWrapper
 
 torch.manual_seed(0)

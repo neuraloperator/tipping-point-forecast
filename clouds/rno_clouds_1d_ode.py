@@ -2,11 +2,14 @@ import torch.nn.functional as F
 from timeit import default_timer
 from tqdm import tqdm
 import pickle
+import os
 import sys
 import random
 from sklearn.preprocessing import MinMaxScaler
+import torch
+import numpy as np
 
-sys.path.append("../nonstationary_lorenz")
+sys.path.append(os.path.join(os.path.dirname(__file__), "../nonstationary_lorenz"))
 from utilities_lorenz import *
 
 from rno_wrapper import RNOWrapper
