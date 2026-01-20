@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_ks import *
 from tqdm import tqdm
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     ################################################################
 
     t1 = default_timer()
-    data = np.load('data/tipping_KS_data_200_traj_dt_0_1.npy')[:, ::sub]
+    data = np.load('PATH/TO/DATA.npy')[:, ::sub]
     data = torch.tensor(data)
 
     n_time = data.shape[2]

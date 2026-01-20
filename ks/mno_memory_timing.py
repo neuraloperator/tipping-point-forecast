@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_ks import *
 from tqdm import tqdm
@@ -39,7 +40,6 @@ if __name__ == '__main__':
         in_channels=dim,
         out_channels=dim,
         n_layers=4,
-        positional_embedding="grid",
         domain_padding=[0.5, 0]
     ).to(device).float()
 

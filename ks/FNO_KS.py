@@ -148,10 +148,9 @@ if __name__ == '__main__':
         in_channels=dim,
         out_channels=dim,
         n_layers=4,
-        positional_embedding="grid",
         domain_padding=[0.5, 0]
     ).cuda().float()
-    print("Model parameters:", model.count_params())
+    print("Model parameters:", count_params(model))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step, gamma=scheduler_gamma)

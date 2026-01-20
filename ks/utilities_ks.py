@@ -187,5 +187,5 @@ class HsLoss(object):
 def count_params(model):
     c = 0
     for p in list(model.parameters()):
-        c += reduce(operator.mul, list(p.size()))
+        c += reduce(operator.mul, list(p.size()), 1)
     return c
