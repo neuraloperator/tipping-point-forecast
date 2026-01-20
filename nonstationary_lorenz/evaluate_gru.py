@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm

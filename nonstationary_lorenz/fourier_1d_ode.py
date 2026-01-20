@@ -3,6 +3,7 @@ Learns trajectory of ODE by using a 1D FNO performing FFT and IFFT in time.
 """
 
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm
@@ -156,7 +157,6 @@ if __name__ == '__main__':
         in_channels=dim,
         out_channels=dim,
         n_layers=4,
-        positional_embedding="grid",
         domain_padding=0.125
     ).cuda().float()
     print("Parameters:", count_params(model))

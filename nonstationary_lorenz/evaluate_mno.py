@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm
@@ -9,6 +10,17 @@ from neuralop.utils import count_model_params
 
 torch.manual_seed(0)
 np.random.seed(0)
+
+def get_index_from_time(T_min, T_max, query_time, arr_size):
+    """
+    Given array with data spanning from time T_min to T_max, return the index in the array
+    associated with query_time.
+    """
+    time_range = T_max - T_min
+    return round(arr_size * (query_time - T_min) / time_range)
+
+def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
+    return num - (num % divisor)
 
 if __name__ == '__main__':
     sub = 5 # temporal subsampling rate
@@ -92,7 +104,7 @@ if __name__ == '__main__':
 
     # model
     model = torch.load('PATH/TO/MODEL')
-    print("Parameters:", count_model_params(model))
+    print("Parameters:", count_params(model))
     print()
 
     ################################################################

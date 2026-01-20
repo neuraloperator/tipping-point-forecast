@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm
@@ -106,7 +107,7 @@ if __name__ == '__main__':
     # model
     from neuralop.models import RNO
     model = torch.load('PATH/TO/MODEL').cuda()
-    print("Parameters:", model.count_params())
+    print("Parameters:", count_params(model))
     print()
 
     ################################################################

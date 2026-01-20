@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm
@@ -11,6 +12,9 @@ from neuralop.models import RNO
 torch.manual_seed(0)
 np.random.seed(0)
 
+def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
+    return num - (num % divisor)
+
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device:", device)
@@ -18,7 +22,7 @@ if __name__ == '__main__':
     sub = 5 # temporal subsampling rate
     T = 64 # input last T time steps and output next T
     dim = 3 # dimensionality of ODE
-
+    
     experiment_name = 'PATH/TO/MODEL'
     model = torch.load(experiment_name, map_location=device)
 

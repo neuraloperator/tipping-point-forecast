@@ -1,4 +1,5 @@
 import torch.nn.functional as F
+import numpy as np
 from timeit import default_timer
 from utilities_lorenz import *
 from tqdm import tqdm
@@ -8,6 +9,9 @@ from neuralop.models import FNO
 
 torch.manual_seed(0)
 np.random.seed(0)
+
+def round_down(num, divisor): # rounds `num` down to nearest multiple of `divisor`
+    return num - (num % divisor)
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,9 +79,10 @@ if __name__ == '__main__':
 
         start.record()
         
-        out = model(model_input)
+        # Permute for FNO (Batch, Channels, Time)
+        out = model(model_input.permute(0, 2, 1)).permute(0, 2, 1)
         for _ in range(num_steps - 1):
-            out = model(out)
+            out = model(out.permute(0, 2, 1)).permute(0, 2, 1)
 
         end.record()
 
